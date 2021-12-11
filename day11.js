@@ -1,20 +1,12 @@
-// Part 1 pseudocode:
-// maintain a queue for flashing
-// loop through all energies
-    // update each energy by 1   
-    // if an energy > 9, add that to flashing queue
-// after all flashing are added
-// while queue is not empty
-    // if already flashed and updated neighbors, don't update the neighbors again
-    // otherise, update all its neighbors
-        // if the neighbor already flashed, don't update that neighbor
-        // otherwise, add 1 to the neighbor's energy
-        // if neighbor's energy > 9, add neighbor to flashing queue
-    // update the energy to 0 and add to already flashed
-
 const fs = require('fs')
 const energies = fs.readFileSync('day11.txt', 'UTF-8').split(/\r?\n/).map(data => data.split('').map(level => parseInt(level)))
 const testenergies = fs.readFileSync('day11test.txt', 'UTF-8').split(/\r?\n/).map(data => data.split('').map(level => parseInt(level)))
+
+const allFlashed = data => {
+    return data.reduce((allFlashing, energies) => {
+        return allFlashing = allFlashing && energies.filter(e => e != 0).length == 0
+    }, true)
+}
 
 const getDirections = (data, i, j) => {
     let directions = ['u','d','l','r','ul','ur','dl','dr']
@@ -37,30 +29,28 @@ const updateNeighbors = (data, flashing) => {
         const currFlash = flashing.pop()
         flashCount += 1
         const [i, j] = currFlash.split(',').map(energy => parseInt(energy))
-        if (flashed.includes(currFlash)) {
-            continue
-        }
-        for (let d of getDirections(data, i, j)) {
-            const iMove = d.includes('u') ? -1 : (d.includes('d') ? 1 : 0)
-            const jMove = d.includes('r') ? 1 : (d.includes('l') ? -1 : 0)
-            if (flashed.includes(`${i+iMove},${j+jMove}`)) {
-                continue
+        if (!flashed.includes(currFlash)) {
+            for (let d of getDirections(data, i, j)) {
+                const nI = i + (d.includes('u') ? -1 : (d.includes('d') ? 1 : 0))
+                const nJ = j + (d.includes('r') ? 1 : (d.includes('l') ? -1 : 0))
+                if (!flashed.includes(`${nI},${nJ}`)) {
+                    data[nI][nJ] += 1
+                    if (data[nI][nJ] > 9 && !flashing.includes(`${nI},${nJ}`)) {
+                        flashing.push(`${nI},${nJ}`)
+                    }
+                }
             }
-            data[i + iMove][j + jMove] += 1
-            if (data[i + iMove][j + jMove] > 9 && !flashing.includes(`${i+iMove},${j+jMove}`)) {
-                flashing.push(`${i+iMove},${j+jMove}`)
-            }
+            data[i][j] = 0
+            flashed.push(currFlash)
         }
-        data[i][j] = 0
-        flashed.push(currFlash)
     }
     return flashCount
 }
 
-const updateEnergy = (data, step) => {
+const updateEnergy = (data, step = 1000) => {
     const flashing = []
-    let flashCount = 0
-    while (step > 0) {
+    let flashCount = 0, syncStep = null
+    for (let s = 0; s < step; s += 1) {
         for (let i = 0; i < data.length; i += 1) {
             for (let j = 0; j < data[0].length; j += 1) {
                 data[i][j] += 1
@@ -70,9 +60,29 @@ const updateEnergy = (data, step) => {
             }
         }
         flashCount += updateNeighbors(data, flashing)
-        step -= 1
+        if (allFlashed(data)) {
+            syncStep = s + 1
+            break
+        }
     }
-    return flashCount
+    return [flashCount, syncStep]
 }
-console.assert(updateEnergy(testenergies, 100) == 1656)
-console.log(`part 1 answer: ${updateEnergy(energies, 100)}`)
+
+console.assert(updateEnergy(JSON.parse(JSON.stringify(testenergies)), 100)[0] == 1656)
+console.assert(updateEnergy(JSON.parse(JSON.stringify(testenergies)), 196)[1] == 195)
+console.log(`part 1 answer: ${updateEnergy(JSON.parse(JSON.stringify(energies)), 100)[0]}`)
+console.log(`part 2 answer ${updateEnergy(JSON.parse(JSON.stringify(energies)))[1]}`)
+
+// Part 1 pseudocode:
+// maintain a queue for flashing
+// loop through all energies
+//     update each energy by 1   
+//     if an energy > 9, add that to flashing queue
+// after all flashing are added
+// while queue is not empty
+//     only if it hasn't flashed and updated neighbors
+//         update all its neighbors
+//             if the neighbor hasn't already flashed
+//                 add 1 to the neighbor's energy
+//                 if neighbor's energy > 9, add neighbor to flashing queue
+//         update the energy to 0 and add to already flashed
