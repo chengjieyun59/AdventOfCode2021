@@ -1,3 +1,17 @@
+// Part 1 pseudocode:
+// maintain a queue for flashing
+// loop through all energies
+    // update each energy by 1   
+    // if an energy > 9, add that to flashing queue
+// after all flashing are added
+// while queue is not empty
+    // if already flashed and updated neighbors, don't update the neighbors again
+    // otherise, update all its neighbors
+        // if the neighbor already flashed, don't update that neighbor
+        // otherwise, add 1 to the neighbor's energy
+        // if neighbor's energy > 9, add neighbor to flashing queue
+    // update the energy to 0 and add to already flashed
+
 const fs = require('fs')
 const energies = fs.readFileSync('day11.txt', 'UTF-8').split(/\r?\n/).map(data => data.split('').map(level => parseInt(level)))
 const testenergies = fs.readFileSync('day11test.txt', 'UTF-8').split(/\r?\n/).map(data => data.split('').map(level => parseInt(level)))
@@ -17,12 +31,13 @@ const getDirections = (data, i, j) => {
 }
 
 const updateNeighbors = (data, flashing) => {
+    let flashCount = 0
     const flashed = []
     while (flashing.length > 0) {
         const currFlash = flashing.pop()
+        flashCount += 1
         const [i, j] = currFlash.split(',').map(energy => parseInt(energy))
         if (flashed.includes(currFlash)) {
-            data[i][j] = 0
             continue
         }
         for (let d of getDirections(data, i, j)) {
@@ -36,14 +51,15 @@ const updateNeighbors = (data, flashing) => {
                 flashing.push(`${i+iMove},${j+jMove}`)
             }
         }
-        flashed.push(currFlash)
         data[i][j] = 0
+        flashed.push(currFlash)
     }
-
+    return flashCount
 }
 
 const updateEnergy = (data, step) => {
     const flashing = []
+    let flashCount = 0
     while (step > 0) {
         for (let i = 0; i < data.length; i += 1) {
             for (let j = 0; j < data[0].length; j += 1) {
@@ -53,27 +69,10 @@ const updateEnergy = (data, step) => {
                 }
             }
         }
-        updateNeighbors(data, flashing)
+        flashCount += updateNeighbors(data, flashing)
         step -= 1
     }
-    return data
+    return flashCount
 }
-console.log(updateEnergy(testenergies, 100))
-
-for (let e of testenergies) {
-    console.log(e.join(''))
-}
-
-// update each energy by 1
-// maintain a queue for flashing
-// if an energy > 9, add that to flashing queue
-
-// after all flashing are added
-// while queue is not empty
-    // if already flashed, update the energy to 0 and skip the for loop
-    // update all flash's neighbors
-        // if neighbor already flashed, skip
-        // update each energy by 1
-        // if an energy > 9, add that to flashing queue
-    // update the enery to 0
-    // add to already flashed
+console.assert(updateEnergy(testenergies, 100) == 1656)
+console.log(`part 1 answer: ${updateEnergy(energies, 100)}`)
